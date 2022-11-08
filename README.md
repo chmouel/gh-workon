@@ -14,6 +14,7 @@ gh extension install chmouel/gh-workon
 
 ### Requirements
 
+- [GH](https://github.com/cli/cli)
 - GNU sed
 - GNU awk
 - [FZF](https://github.com/junegunn/fzf)
