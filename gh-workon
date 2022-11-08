@@ -3,10 +3,10 @@ set -uefo pipefail
 createbranch=yes
 commitmessage=
 
-AWK=awk
-SED=sed
+AWK="awk"
+SED="sed"
 type -p gawk >/dev/null && AWK=gawk
-type -p gsed >/dev/null && AWK=gsed
+type -p gsed >/dev/null && SED=gsed
 
 git rev-parse --show-toplevel 2>/dev/null >/dev/null || {
 	echo "error: not in a git repository" >&2
@@ -42,8 +42,8 @@ while getopts "cNhA" o; do
 done
 shift $((OPTIND - 1))
 
-ARGS=${@}
-[[ -n ${@} ]] && ARGS="-q $@"
+ARGS="$*"
+[[ -n ${ARGS} ]] && ARGS="-q $*"
 
 [[ -n ${commitmessage} && -z ${ARGS} && $(basename $(git symbolic-ref -q HEAD)) =~ issue-([0-9]*) ]] && {
 	ARGS="-q ${BASH_REMATCH[1]}"
@@ -63,7 +63,7 @@ fi
 
 prefix=$(echo "$title" | ${SED} -r 's,kind/\w+,,;s/help wanted//;s/[ ]*#(.*)/\L\1/;s/ [ ]*/ /g;s/[ ]*$//;s/^[ ]*//;s/ /-/g;s,/,,g;s,\(/\`||:|;|"|\|\),,g;s/\\n//g')
 prefix=$(echo "${prefix}" | ${SED} -r "s/('|,)//g;")
-prefix=$(echo "$prefix" | ${AWK} -v len=60 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+prefix=$(echo "$prefix" | ${AWK} -v len=60 "{ if (length(\$0) > len) print substr(\$0, 1, len-3); else print; }")
 [[ $prefix == *- ]] && prefix=$(echo ${prefix} | ${SED} 's/-$//')
 
 if [[ -z ${title} || -z ${number} ]]; then
