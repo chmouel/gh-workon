@@ -36,6 +36,11 @@ The `-N` flag will not create any branch and just print the one that would have 
 ## TODO
 
 - Create worktree instead of branch
+- Convert it to go/rust/python to avoid shell quoting issues.
+
+## BUGS
+
+- may be buggy with some characters due of shell quoting issues.
 
 ## Copyright
 
