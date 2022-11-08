@@ -35,6 +35,7 @@ The `-N` flag will not create any branch and just print the one that would have 
 
 ## TODO
 
+- Support glab
 - Create worktree instead of branch
 - Convert it to go/rust/python to avoid shell quoting issues.
 
