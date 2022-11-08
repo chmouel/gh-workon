@@ -4,8 +4,7 @@ Create a git branch from a GitHub issue and assign it to yourself.
 
 ## Demo
 
-https://user-images.githubusercontent.com/98980/200496376-a8ee4a02-1b12-477f-b921-873de3a53f9a.mp4
-
+https://user-images.githubusercontent.com/98980/200496618-bbd935dd-e34e-4e06-936b-d35b212a6e83.mp4
 
 ## Installation
 
