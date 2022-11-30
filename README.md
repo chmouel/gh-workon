@@ -56,6 +56,6 @@ The `-N` flag will not create any branch and just print the one that would have 
 
 Chmouel Boudjnah
 
-- Fediverse - <[@chmouel@fosstodon.org](https://fosstodon.org/@chmouel)>
+- Fediverse - <[@chmouel@chmouel.com](https://fosstodon.org/@chmouel)>
 - Twitter - <[@chmouel](https://twitter.com/chmouel)>
 - Blog  - <[https://blog.chmouel.com](https://blog.chmouel.com)>
