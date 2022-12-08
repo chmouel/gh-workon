@@ -38,6 +38,10 @@ git commit -m "$(gh workon -c)" --edit
 
 The `-N` flag will not create any branch and just print the one that would have been created.
 
+When you have the `-F` it will use the issue number directly and not try to
+choose any via fzf (useful if you have a old issue reaching the gh issue list
+limit)
+
 ## TODO
 
 - Support glab

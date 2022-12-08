@@ -2,6 +2,7 @@
 set -uefo pipefail
 createbranch=yes
 commitmessage=
+nofzf=
 
 AWK="awk"
 SED="sed"
@@ -19,9 +20,10 @@ function usage {
 	echo "  -N: do not create branch, just show it"
 	echo "  -c: create a commit message out of the issue"
 	echo "  -A: do not automatically assign the issue to the current user"
+	echo "  -F: use issue directly don't search for it (useful if you reach limit)"
 }
 
-while getopts "cNhA" o; do
+while getopts "cFNhA" o; do
 	case "${o}" in
 	c)
 		commitmessage=t
@@ -29,6 +31,9 @@ while getopts "cNhA" o; do
 	h)
 		usage
 		exit 0
+		;;
+	F)
+		nofzf=yes
 		;;
 	N)
 		createbranch=
@@ -43,7 +48,15 @@ done
 shift $((OPTIND - 1))
 
 ARGS="$*"
-[[ -n ${ARGS} ]] && ARGS="-q $*"
+
+if [[ -n ${nofzf} && -z ${ARGS} ]]; then
+	echo "need a arg when -F"
+	exit 1
+elif [[ -n ${nofzf} ]]; then
+	nofzf=${ARGS[0]}
+elif [[ -n ${ARGS} ]]; then
+	ARGS="-q $*"
+fi
 
 [[ -n ${commitmessage} && -z ${ARGS} && $(basename $(git symbolic-ref -q HEAD)) =~ issue-([0-9]*) ]] && {
 	ARGS="-q ${BASH_REMATCH[1]}"
@@ -51,8 +64,15 @@ ARGS="$*"
 
 export CLICOLOR=1
 export CLICOLOR_FORCE=1
-title=$(gh issue list --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e 's/`//g' | fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --ansi --preview="gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
-number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
+if [[ -n ${nofzf} ]];then
+    _resp=$(gh issue view --json 'number,title' --jq '"#" + (.number|tostring) + " " + .title' ${nofzf})
+    title=${_resp#* }
+    n=${_resp%% *}
+    number=${n#\#}
+else
+    title=$(gh issue list --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e 's/`//g' | fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --ansi --preview="gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
+    number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
+fi
 
 if [[ -n ${commitmessage} ]]; then
 	echo $title | ${SED} -r 's/[ ]*#[0-9]+[ ]*//;'
