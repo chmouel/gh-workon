@@ -42,6 +42,13 @@ When you have the `-F` it will use the issue number directly and not try to
 choose any via fzf (useful if you have a old issue reaching the gh issue list
 limit)
 
+## Git hooks
+
+If you install the script [prepare-commit-msg](./prepare-commit-msg) into your
+.git/hooks directory (make sure it is set as executable). It will automatically
+detect if you are in branch named issue-NUMBER and prepare a commit message out
+of the issue title for you.
+
 ## TODO
 
 - Support glab

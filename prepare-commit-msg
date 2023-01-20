@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Install this hook in your .git/hooks to automatically add the message
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+SHA1=$3
+
+TMP=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${TMP}; }
+trap clean EXIT
+
+
+BRANCH=$(git symbolic-ref HEAD --short)
+
+if [[ ${BRANCH} =~ issue-([0-9]*) ]];then
+    if ! grep -Eqi "(\b)?(Close|Fixe|Fix)(s)? (#)?${BASH_REMATCH[1]}" ${COMMIT_MSG_FILE};then
+        if [[ $(head -1 ${COMMIT_MSG_FILE}) != "" ]];then
+            sed -i "2aFixes #${BASH_REMATCH[1]}" ${COMMIT_MSG_FILE}
+            exit
+        fi
+
+        gh workon -c > ${TMP}
+        cat ${COMMIT_MSG_FILE} >> ${TMP}
+        mv ${TMP} ${COMMIT_MSG_FILE}
+    fi
+fi
+
