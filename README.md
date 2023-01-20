@@ -49,7 +49,7 @@ If you install the script [prepare-commit-msg](./prepare-commit-msg) into your
 detect if you are in branch named `issue-NUMBER` and prepare a commit message out
 of the issue title for you.
 
-It tries to do the right thing and only add the Fixes #ISSUE_NUMBER if there is already a commit message but not the fixes stanza.
+It tries to do the right thing and only add the `Fixes #ISSUE_NUMBER` if there is already a commit message but that `Fixes` keywork is not there.
 
 ## TODO
 
