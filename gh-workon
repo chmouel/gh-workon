@@ -4,6 +4,7 @@ createbranch=yes
 commitmessage=
 nofzf=
 
+DEFAULTLIMIT=30
 AWK="awk"
 SED="sed"
 type -p gawk >/dev/null && AWK=gawk
@@ -20,11 +21,15 @@ function usage {
 	echo "  -N: do not create branch, just show it"
 	echo "  -c: create a commit message out of the issue"
 	echo "  -A: do not automatically assign the issue to the current user"
+    echo "  -l: limit the number of issues to list (default: $DEFAULTLIMIT)"
 	echo "  -F: use issue directly don't search for it (useful if you reach limit)"
 }
 
-while getopts "cFNhA" o; do
+while getopts "cFNhAl:" o; do
 	case "${o}" in
+	l)
+		limit=$OPTARG
+		;;
 	c)
 		commitmessage=t
 		;;
@@ -62,7 +67,6 @@ fi
 	ARGS="-q ${BASH_REMATCH[1]}"
 }
 
-export CLICOLOR=1
 export CLICOLOR_FORCE=1
 if [[ -n ${nofzf} ]];then
     _resp=$(gh issue view --json 'number,title' --jq '"#" + (.number|tostring) + " " + .title' ${nofzf})
@@ -70,7 +74,7 @@ if [[ -n ${nofzf} ]];then
     n=${_resp%% *}
     number=${n#\#}
 else
-    title=$(gh issue list --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e 's/`//g' | fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --ansi --preview="gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
+    title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
     number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
 fi
 
