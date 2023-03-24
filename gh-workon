@@ -3,6 +3,7 @@ set -uefo pipefail
 createbranch=yes
 commitmessage=
 nofzf=
+noassignee=
 
 DEFAULTLIMIT=30
 AWK="awk"
@@ -27,12 +28,12 @@ function usage {
 
 while getopts "cFNhAl:" o; do
 	case "${o}" in
+    A)
+        noassignee=true;;
 	l)
-		limit=$OPTARG
-		;;
+		limit=$OPTARG;;
 	c)
-		commitmessage=t
-		;;
+		commitmessage=t;;
 	h)
 		usage
 		exit 0
@@ -95,7 +96,7 @@ if [[ -z ${title} || -z ${number} ]]; then
 	exit
 fi
 
-gh issue edit ${number} --add-assignee "@me"
+[[ -z ${noassignee} ]] && gh issue edit ${number} --add-assignee "@me"
 [[ -n ${createbranch} ]] && {
 	git checkout -b issue-${prefix}
 	exit 0
