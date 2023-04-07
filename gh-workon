@@ -4,6 +4,7 @@ createbranch=yes
 commitmessage=
 nofzf=
 noassignee=
+jira=
 
 DEFAULTLIMIT=30
 AWK="awk"
@@ -22,18 +23,22 @@ function usage {
 	echo "  -N: do not create branch, just show it"
 	echo "  -c: create a commit message out of the issue"
 	echo "  -A: do not automatically assign the issue to the current user"
-    echo "  -l: limit the number of issues to list (default: $DEFAULTLIMIT)"
+	echo "  -l: limit the number of issues to list (default: $DEFAULTLIMIT)"
 	echo "  -F: use issue directly don't search for it (useful if you reach limit)"
+	echo "  -j: use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
 }
 
-while getopts "cFNhAl:" o; do
+while getopts "cjFNhAl:" o; do
 	case "${o}" in
-    A)
-        noassignee=true;;
+	A)
+		noassignee=true
+		;;
 	l)
-		limit=$OPTARG;;
+		limit=$OPTARG
+		;;
 	c)
-		commitmessage=t;;
+		commitmessage=t
+		;;
 	h)
 		usage
 		exit 0
@@ -41,6 +46,9 @@ while getopts "cFNhAl:" o; do
 	F)
 		nofzf=yes
 		;;
+    j)
+        jira=yes
+        ;;
 	N)
 		createbranch=
 		;;
@@ -60,6 +68,8 @@ if [[ -n ${nofzf} && -z ${ARGS} ]]; then
 	exit 1
 elif [[ -n ${nofzf} ]]; then
 	nofzf=${ARGS[0]}
+elif [[ -n ${jira} ]]; then
+	jira=${ARGS[0]}
 elif [[ -n ${ARGS} ]]; then
 	ARGS="-q $*"
 fi
@@ -69,14 +79,26 @@ fi
 }
 
 export CLICOLOR_FORCE=1
-if [[ -n ${nofzf} ]];then
-    _resp=$(gh issue view --json 'number,title' --jq '"#" + (.number|tostring) + " " + .title' ${nofzf})
-    title=${_resp#* }
-    n=${_resp%% *}
-    number=${n#\#}
+if [[ -n ${nofzf} ]]; then
+	_resp=$(gh issue view --json 'number,title' --jq '"#" + (.number|tostring) + " " + .title' ${nofzf})
+	title=${_resp#* }
+	n=${_resp%% *}
+	number=${n#\#}
+elif [[ -n ${jira} ]]; then
+	[[ -z ${GH_WORKON_JIRA_SERVER:-""} ]] && {
+		echo "GH_WORKON_JIRA_SERVER en variable need to be set"
+		exit 1
+	}
+	title=$(curl -s -f --fail-early ${GH_WORKON_JIRA_SERVER}/rest/api/2/issue/${jira} | jq -r ".fields.summary")
+	[[ -z ${title} ]] && {
+		echo "no titlte found for ${jira}"
+		exit 1
+	}
+    title=${jira}-${title,,}
+	number=${jira}
 else
-    title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
-    number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
+	title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
+	number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
 fi
 
 if [[ -n ${commitmessage} ]]; then
@@ -96,7 +118,17 @@ if [[ -z ${title} || -z ${number} ]]; then
 	exit
 fi
 
-[[ -z ${noassignee} ]] && gh issue edit ${number} --add-assignee "@me"
+if [[ -z ${noassignee} ]];then
+    if [[ -n ${jira} ]];then
+        if [[ -n $(type -p jira 2>/dev/null) ]];then 
+            jira issue assign ${jira} $GH_WORKON_JIRA_ME
+        else
+            echo "need jira-bin (https://github.com/go-jira/jira) installed and configured to assign jira"
+        fi
+    else
+        gh issue edit ${number} --add-assignee "@me"
+    fi
+fi
 [[ -n ${createbranch} ]] && {
 	git checkout -b issue-${prefix}
 	exit 0
