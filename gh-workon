@@ -5,6 +5,7 @@ commitmessage=
 nofzf=
 noassignee=
 jira=
+limit=
 
 DEFAULTLIMIT=30
 AWK="awk"
@@ -62,6 +63,7 @@ done
 shift $((OPTIND - 1))
 
 ARGS="$*"
+[[ -z ${limit} ]] && limit=$DEFAULTLIMIT
 
 if [[ -n ${nofzf} && -z ${ARGS} ]]; then
 	echo "need a arg when -F"
