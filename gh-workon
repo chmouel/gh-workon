@@ -3,9 +3,14 @@ set -uefo pipefail
 createbranch=yes
 commitmessage=
 nofzf=
-noassignee=
+noassignee=${GH_WORKON_NOASSIGNEE:-""}
 jira=
-limit=
+limit=${GH_WORKON_LIMIT:-""}
+worktree=${GH_WORKON_WORKTREE:-""}
+debug=
+
+[[ -n ${GH_WORKON_NOCREATEBRANCH:-""} ]] && createbranch=
+[[ -n ${GH_WORKON_DEBUG:-""} ]] && debug="echo"
 
 DEFAULTLIMIT=30
 AWK="awk"
@@ -13,22 +18,27 @@ SED="sed"
 type -p gawk >/dev/null && AWK=gawk
 type -p gsed >/dev/null && SED=gsed
 
-
+[[ -n ${debug} ]] && set -x
 function usage {
-	echo "Usage: gh-workon [-h] issue-to-search"
-	echo "  -h: show this help"
-	echo "  -N: do not create branch, just show it"
-	echo "  -c: create a commit message out of the issue"
-	echo "  -A: do not automatically assign the issue to the current user"
-	echo "  -l: limit the number of issues to list (default: $DEFAULTLIMIT)"
-	echo "  -F: use issue directly don't search for it (useful if you reach limit)"
-	echo "  -j: use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
+	echo "Usag: gh-workon [-h] issue-to-search"
+	echo "  -h show this help"
+	echo "  -d show command that is about to run but don't run them (env: \$GH_WORKON_DEBUG)"
+	echo "  -N do not create a branch or worktree, just show the branch that is about to be created (env: \$GH_WORKON_NOCREATEBRANCH)"
+	echo "  -c create a commit message out of the issue"
+	echo "  -A do not automatically assign the issue to the current user (env: \$GH_WORKON_NOASSIGNEE)"
+	echo "  -l limit the number of issues to list (default: $DEFAULTLIMIT, env: \$GH_WORKON_LIMIT)"
+	echo "  -F use issue directly don't search for it (useful if you reach limit)"
+	echo "  -j use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
+	echo "  -w PATH: create a worktree taking this PATH as base (env: \$GH_WORKON_WORKTREE)"
 }
 
-while getopts "hcjFNhAl:" o; do
+while getopts "dhcjFNhAl:w:" o; do
 	case "${o}" in
 	A)
 		noassignee=true
+		;;
+	d)
+		debug="echo"
 		;;
 	l)
 		limit=$OPTARG
@@ -43,11 +53,14 @@ while getopts "hcjFNhAl:" o; do
 	F)
 		nofzf=yes
 		;;
-    j)
-        jira=yes
-        ;;
+	j)
+		jira=yes
+		;;
 	N)
 		createbranch=
+		;;
+	w)
+		worktree=$OPTARG
 		;;
 	*)
 		echo "Invalid option: -$1" >&2
@@ -97,7 +110,7 @@ elif [[ -n ${jira} ]]; then
 		echo "no titlte found for ${jira}"
 		exit 1
 	}
-    title=${jira}-${title,,}
+	title=${jira}-${title,,}
 	number=${jira}
 else
 	title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
@@ -121,20 +134,27 @@ if [[ -z ${title} || -z ${number} ]]; then
 	exit
 fi
 
-if [[ -z ${noassignee} ]];then
-    if [[ -n ${jira} ]];then
-        if [[ -n $(type -p jira 2>/dev/null) ]];then 
-            jira issue assign ${jira} $GH_WORKON_JIRA_ME
-        else
-            echo "need jira-bin (https://github.com/go-jira/jira) installed and configured to assign jira"
-        fi
-    else
-        gh issue edit ${number} --add-assignee "@me"
-    fi
+if [[ -z ${noassignee} ]]; then
+	if [[ -n ${jira} ]]; then
+		if [[ -n $(type -p jira 2>/dev/null) ]]; then
+			$debug jira issue assign ${jira} $GH_WORKON_JIRA_ME >&2
+		else
+			echo "need jira-bin (https://github.com/go-jira/jira) installed and configured to assign jira"
+		fi
+	else
+		$debug gh issue edit ${number} --add-assignee "@me" >&2
+	fi
 fi
-[[ -n ${createbranch} ]] && {
-	git checkout -b issue-${prefix}
-	exit 0
-}
 
-echo issue-${prefix}
+[[ -z $worktree ]] && echo issue-${prefix}
+[[ -z ${createbranch} ]] && exit 0
+
+if [[ -n ${worktree} ]]; then
+	d=${worktree}/issue-${prefix}
+	d=$(readlink -f $d)
+	$debug git worktree add $d -b issue-${prefix} >&2
+	echo "$d"
+	exit 0
+fi
+
+$debug git checkout -b issue-${prefix}
