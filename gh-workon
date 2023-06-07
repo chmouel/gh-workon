@@ -8,6 +8,7 @@ jira=
 limit=${GH_WORKON_LIMIT:-""}
 worktree=${GH_WORKON_WORKTREE:-""}
 debug=
+frombranch=
 
 [[ -n ${GH_WORKON_NOCREATEBRANCH:-""} ]] && createbranch=
 [[ -n ${GH_WORKON_DEBUG:-""} ]] && debug="echo"
@@ -29,11 +30,16 @@ function usage {
 	echo "  -l limit the number of issues to list (default: $DEFAULTLIMIT, env: \$GH_WORKON_LIMIT)"
 	echo "  -F use issue directly don't search for it (useful if you reach limit)"
 	echo "  -j use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
-	echo "  -w PATH: create a worktree taking this PATH as base (env: \$GH_WORKON_WORKTREE)"
+    echo "  -p pick a branch from where to start from with fzf (env: \$GH_WORKON_PICK_BRANCH)"
+	echo "  -w PATH create a worktree taking this PATH as base (env: \$GH_WORKON_WORKTREE)"
 }
 
-while getopts "dhcjFNhAl:w:" o; do
+while getopts "dhcjFNhAl:w:p" o; do
 	case "${o}" in
+	p)
+		frombranch=yes
+		;;
+
 	A)
 		noassignee=true
 		;;
@@ -90,6 +96,16 @@ elif [[ -n ${ARGS} ]]; then
 	ARGS="-q $*"
 fi
 
+[[ -n $frombranch || -n ${GH_WORKON_PICK_BRANCH-:""} ]] && {
+	frombranch=$(
+		git branch --sort=-committerdate --format='%(refname:short)' |
+			fzf --border --preview "git log --no-merges --patch-with-stat -1 {}|bat --language=diff --color=always" \
+				--prompt "Pick a branch to start from: " \
+				--preview-window=up:60%
+	)
+	[[ $frombranch == "" ]] && exit 0
+}
+
 [[ -n ${commitmessage} && -z ${ARGS} && $(basename $(git symbolic-ref -q HEAD)) =~ issue-([0-9]*) ]] && {
 	ARGS="-q ${BASH_REMATCH[1]}"
 }
@@ -113,7 +129,7 @@ elif [[ -n ${jira} ]]; then
 	title=${jira}-${title,,}
 	number=${jira}
 else
-	title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
+	title=$(gh issue list -L ${limit} --json number,title --jq '.[] | "#" + (.number|tostring) + " " + .title' | ${SED} -e "s/'//g" -e 's/`//g' | fzf --prompt "Pick a GH issue: " -1 ${ARGS} --ansi --header "Choose a GitHUB Issue" --ansi --preview="env GH_FORCE_TTY=80% CLICOLOR_FORCE=1 gh issue view \`echo '{}'|${SED} 's/#\([0-9]*\).*/\1/'\`")
 	number=$(echo $title | ${SED} 's/[ ]*#\([0-9]*\).*/\1/')
 fi
 
@@ -152,9 +168,9 @@ fi
 if [[ -n ${worktree} ]]; then
 	d=${worktree}/issue-${prefix}
 	d=$(readlink -f $d)
-	$debug git worktree add $d -b issue-${prefix} >&2
+	$debug git worktree add $d -b issue-${prefix} ${frombranch} >&2
 	echo "$d"
 	exit 0
 fi
 
-$debug git checkout -b issue-${prefix}
+$debug git checkout -b issue-${prefix} ${frombranch} >&2
