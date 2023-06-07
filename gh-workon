@@ -13,10 +13,6 @@ SED="sed"
 type -p gawk >/dev/null && AWK=gawk
 type -p gsed >/dev/null && SED=gsed
 
-git rev-parse --show-toplevel 2>/dev/null >/dev/null || {
-	echo "error: not in a git repository" >&2
-	exit 1
-}
 
 function usage {
 	echo "Usage: gh-workon [-h] issue-to-search"
@@ -29,7 +25,7 @@ function usage {
 	echo "  -j: use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
 }
 
-while getopts "cjFNhAl:" o; do
+while getopts "hcjFNhAl:" o; do
 	case "${o}" in
 	A)
 		noassignee=true
@@ -64,6 +60,11 @@ shift $((OPTIND - 1))
 
 ARGS="$*"
 [[ -z ${limit} ]] && limit=$DEFAULTLIMIT
+
+git rev-parse --show-toplevel 2>/dev/null >/dev/null || {
+	echo "error: not in a git repository" >&2
+	exit 1
+}
 
 if [[ -n ${nofzf} && -z ${ARGS} ]]; then
 	echo "need a arg when -F"
