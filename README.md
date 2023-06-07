@@ -4,7 +4,12 @@ Create a git branch from a GitHub issue and assign it to yourself.
 
 ## Demo
 
+#### Simple
 https://user-images.githubusercontent.com/98980/200496618-bbd935dd-e34e-4e06-936b-d35b212a6e83.mp4
+
+### Using worktree and selecting the branch from where to start
+
+https://github.com/chmouel/gh-workon/assets/98980/d3fd47c2-5eab-41d1-b933-c985161a6506
 
 ## Installation
 
@@ -41,6 +46,10 @@ The `-N` flag will not create any branch and just print the one that would have 
 When you have the `-F` it will use the issue number directly and not try to
 choose any via fzf (useful if you have a old issue reaching the gh issue list
 limit)
+
+You can specify the flag `-p` to prompt for a branch (with fzf) from where the new branch or worktree will start from.
+
+You can specify a -w with a basedir as argument to have a worktree created in the basedir (with the issue name appended) and a new branch.
 
 ## Git hooks
 
