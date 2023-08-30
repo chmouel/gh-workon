@@ -96,7 +96,7 @@ elif [[ -n ${ARGS} ]]; then
 	ARGS="-q $*"
 fi
 
-[[ -n $frombranch || -n ${GH_WORKON_PICK_BRANCH-:""} ]] && {
+[[ -n $frombranch || -n ${GH_WORKON_PICK_BRANCH-:""} && -z ${commitmessage} ]] && {
 	frombranch=$(
 		git branch --sort=-committerdate --format='%(refname:short)' |
 			fzf --border --preview "git log --no-merges --patch-with-stat -1 {}|bat --language=diff --color=always" \
