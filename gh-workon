@@ -29,8 +29,8 @@ function usage {
 	echo "  -A do not automatically assign the issue to the current user (env: \$GH_WORKON_NOASSIGNEE)"
 	echo "  -l limit the number of issues to list (default: $DEFAULTLIMIT, env: \$GH_WORKON_LIMIT)"
 	echo "  -F use issue directly don't search for it (useful if you reach limit)"
-	echo "  -j use jira ticket need \$GH_WORKON_JIRA_SERVER to be set"
-    echo "  -p pick a branch from where to start from with fzf (env: \$GH_WORKON_PICK_BRANCH)"
+	echo "  -j use jira ticket need \$GH_WORKON_JIRA_SERVER to be set or will be detected if full url is provided"
+	echo "  -p pick a branch from where to start from with fzf (env: \$GH_WORKON_PICK_BRANCH)"
 	echo "  -w PATH create a worktree taking this PATH as base (env: \$GH_WORKON_WORKTREE)"
 }
 
@@ -39,7 +39,6 @@ while getopts "dhcjFNhAl:w:p" o; do
 	p)
 		frombranch=yes
 		;;
-
 	A)
 		noassignee=true
 		;;
@@ -117,6 +116,10 @@ if [[ -n ${nofzf} ]]; then
 	n=${_resp%% *}
 	number=${n#\#}
 elif [[ -n ${jira} ]]; then
+	if [[ ${jira} =~ https://([^/]*)/browse/([^/]*) ]]; then
+		[[ -z ${GH_WORKON_JIRA_SERVER:-""} ]] && GH_WORKON_JIRA_SERVER=https://${BASH_REMATCH[1]}
+		jira=${BASH_REMATCH[2]}
+	fi
 	[[ -z ${GH_WORKON_JIRA_SERVER:-""} ]] && {
 		echo "GH_WORKON_JIRA_SERVER en variable need to be set"
 		exit 1
