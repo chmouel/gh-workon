@@ -96,10 +96,12 @@ elif [[ -n ${ARGS} ]]; then
 fi
 
 [[ -n $frombranch || -n ${GH_WORKON_PICK_BRANCH-:""} && -z ${commitmessage} ]] && {
-  git branch --sort=-committerdate --format='%(refname:short)' |
-    fzf --border --preview "git log --no-merges --patch-with-stat -1 {}|\$(command -v bat > /dev/null && echo 'bat --language=diff --color=always' || echo 'cat')" \
-      --prompt "Pick a branch to start from: " \
-      --preview-window=up:60%
+  frombranch=$(
+    git branch --sort=-committerdate --format='%(refname:short)' |
+      fzf --border --preview "git log --no-merges --patch-with-stat -1 {}|\$(command -v bat > /dev/null && echo 'bat --language=diff --color=always' || echo 'cat')" \
+        --prompt "Pick a branch to start from: " \
+        --preview-window=up:60%
+  )
   [[ $frombranch == "" ]] && exit 0
 }
 
